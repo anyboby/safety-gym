@@ -17,7 +17,6 @@ The configuration is specified in
         }
         return deepcopy(sim_state)
 ```
-
 To reset safety-gym to a previous state, store the config and provide reset(state_config=None) with the config dict. 
 See random_agent for an example script that resets the agent to its initial state at every start of an episode:
 

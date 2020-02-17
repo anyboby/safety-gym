@@ -908,7 +908,8 @@ class Engine(gym.Env, gym.utils.EzPickle):
         self.reset_layout = deepcopy(self.layout)
 
         cost = self.cost()
-        assert cost['cost'] == 0, f'World has starting cost! {cost}'
+        if not state_config:
+            assert cost['cost'] == 0, f'World has starting cost! {cost}'
 
         # Reset stateful parts of the environment
         self.first_reset = False  # Built our first world successfully
