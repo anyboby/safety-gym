@@ -872,7 +872,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
             if state_config:      ###@anyboby testing
                 self.world.rebuild(self.world_config_dict, reset_state=state_config['sim_state']) ###@anyboby testing
             else:
-                self.world.rebuild(self.world_config_dict, state=False)
+                self.world.rebuild(self.world_config_dict, last_state=False)
                 
         # Redo a small amount of work, and setup initial goal state
         if state_config:    ###@anyboby testing
