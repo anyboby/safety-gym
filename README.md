@@ -8,7 +8,7 @@ step(a) and reset() now return deepcopies of a dictionary of mujoco-py configura
 
 The configuration is specified in 
 
-'''
+```
     def get_sim_state(self):
         sim_state = {
             'world_config':self.world_config_dict,
@@ -16,12 +16,12 @@ The configuration is specified in
             'layout':self.layout,
         }
         return deepcopy(sim_state)
-'''
+```
 
 To reset safety-gym to a previous state, store the config and provide reset(state_config=None) with the config dict. 
 See random_agent for an example script that resets the agent to its initial state at every start of an episode:
 
-'''
+```
 import gym
 import safety_gym  # noqa
 import numpy as np  # noqa
@@ -45,7 +45,7 @@ def run_random(env_name):
         ep_ret += reward
         ep_cost += info.get('cost', 0)
         env.render()
-'''
+```
 
 Warning: The fork is currently only tested on the point goal tasks.
 
