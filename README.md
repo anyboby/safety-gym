@@ -1,5 +1,54 @@
 **Status:** Archive (code is provided as-is, no updates expected)
 
+
+# Reset State Safety Gym
+This fork enables safety gym to reset to a specified state. 
+
+step(a) and reset() now return deepcopies of a dictionary of mujoco-py configurations. 
+
+The configuration is specified in 
+
+'''
+    def get_sim_state(self):
+        sim_state = {
+            'world_config':self.world_config_dict,
+            'sim_state':self.world.sim.get_state(),
+            'layout':self.layout,
+        }
+        return deepcopy(sim_state)
+'''
+
+To reset safety-gym to a previous state, store the config and provide reset(state_config=None) with the config dict. 
+See random_agent for an example script that resets the agent to its initial state at every start of an episode:
+
+'''
+import gym
+import safety_gym  # noqa
+import numpy as np  # noqa
+
+def run_random(env_name):
+    env = gym.make(env_name)
+    obs, start_config = env.reset()
+    done = False
+    ep_ret = 0
+    ep_cost = 0
+    while True:
+        if done:
+            print('Episode Return: %.3f \t Episode Cost: %.3f'%(ep_ret, ep_cost))
+            ep_ret, ep_cost = 0, 0
+            obs, _ = env.reset(start_config)
+        assert env.observation_space.contains(obs)
+        act = env.action_space.sample()
+        assert env.action_space.contains(act)
+        obs, reward, done, info, _config = env.step(act)
+        # print('reward', reward)
+        ep_ret += reward
+        ep_cost += info.get('cost', 0)
+        env.render()
+'''
+
+Warning: The fork is currently only tested on the point goal tasks.
+
 # Safety Gym
 
 Tools for accelerating safe exploration research. 
