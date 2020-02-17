@@ -308,13 +308,15 @@ class Engine(gym.Env, gym.utils.EzPickle):
         self.action_space = gym.spaces.Box(-1, 1, (self.robot.nu,), dtype=np.float32)
         self.build_observation_space()
         self.build_placements_dict()
-
+        
         self.viewer = None
         self.world = None
         self.clear()
 
         self.seed(self._seed)
         self.done = True
+        self.first_reset = True  ###@anyboby testing
+
 
     def parse(self, config):
         ''' Parse a config dict - see self.DEFAULT for description '''
@@ -555,11 +557,12 @@ class Engine(gym.Env, gym.utils.EzPickle):
         if not self.randomize_layout:
             self.rs = np.random.RandomState(0)
 
+        #if self.first_reset:        ###@anyboby testing
         for _ in range(10000):
             if self.sample_layout():
                 break
         else:
-            raise ResamplingError('Failed to sample layout of objects')
+            raise ResamplingError('Failed to sample layout of objects')   
 
     def sample_layout(self):
         ''' Sample a single layout, returning True if successful, else False. '''
@@ -788,13 +791,13 @@ class Engine(gym.Env, gym.utils.EzPickle):
         ''' Reset internal state for building '''
         self.layout = None
 
-    def build_goal(self):
+    def build_goal(self, gen_from_layout=False):
         ''' Build a new goal position, maybe with resampling due to hazards '''
         if self.task == 'goal':
-            self.build_goal_position()
+            self.build_goal_position(gen_from_layout=gen_from_layout)
             self.last_dist_goal = self.dist_goal()
         elif self.task == 'push':
-            self.build_goal_position()
+            self.build_goal_position(gen_from_layout=gen_from_layout)
             self.last_dist_goal = self.dist_goal()
             self.last_dist_box = self.dist_box()
             self.last_box_goal = self.dist_box_goal()
@@ -821,16 +824,19 @@ class Engine(gym.Env, gym.utils.EzPickle):
         self.layout['goal'] = goal_xy
         return True
 
-    def build_goal_position(self):
+    def build_goal_position(self, gen_from_layout=False):
         ''' Build a new goal position, maybe with resampling due to hazards '''
-        # Resample until goal is compatible with layout
-        if 'goal' in self.layout:
-            del self.layout['goal']
-        for _ in range(10000):  # Retries
-            if self.sample_goal_position():
-                break
-        else:
-            raise ResamplingError('Failed to generate goal')
+        if gen_from_layout:     #### @anyboby testing
+            pass
+        else:    
+            # Resample until goal is compatible with layout
+            if 'goal' in self.layout:
+                del self.layout['goal']
+            for _ in range(10000):  # Retries
+                if self.sample_goal_position():
+                    break
+            else:
+                raise ResamplingError('Failed to generate goal')
         # Move goal geom to new layout position
         self.world_config_dict['geoms']['goal']['pos'][:2] = self.layout['goal']
         #self.world.rebuild(deepcopy(self.world_config_dict))
@@ -843,13 +849,19 @@ class Engine(gym.Env, gym.utils.EzPickle):
         ''' Pick a new goal button, maybe with resampling due to hazards '''
         self.goal_button = self.rs.choice(self.buttons_num)
 
-    def build(self):
+    def build(self, state_config=None):
         ''' Build a new physics simulation environment '''
         # Sample object positions
-        self.build_layout()
+        if state_config:
+            self.layout = state_config['layout']
+        else:
+            self.build_layout()
 
-        # Build the underlying physics world
-        self.world_config_dict = self.build_world_config()
+        # Build the underlying physics world    
+        if state_config:          ###@anyboby testing
+            self.world_config_dict = state_config['world_config']
+        else:
+            self.world_config_dict = self.build_world_config()
 
         if self.world is None:
             self.world = World(self.world_config_dict)
@@ -857,9 +869,16 @@ class Engine(gym.Env, gym.utils.EzPickle):
             self.world.build()
         else:
             self.world.reset(build=False)
-            self.world.rebuild(self.world_config_dict, state=False)
+            if state_config:      ###@anyboby testing
+                self.world.rebuild(self.world_config_dict, reset_state=state_config['sim_state']) ###@anyboby testing
+            else:
+                self.world.rebuild(self.world_config_dict, state=False)
+                
         # Redo a small amount of work, and setup initial goal state
-        self.build_goal()
+        if state_config:    ###@anyboby testing
+            self.build_goal(gen_from_layout=True)       ### gen 
+        else:
+            self.build_goal()
 
         # Save last action
         self.last_action = np.zeros(self.action_space.shape)
@@ -867,17 +886,24 @@ class Engine(gym.Env, gym.utils.EzPickle):
         # Save last subtree center of mass
         self.last_subtreecom = self.world.get_sensor('subtreecom')
 
-    def reset(self):
-        ''' Reset the physics simulation and return observation '''
+    def reset(self, state_config=None):
+        ''' Reset the physics simulation and return observation 
+            provide a state_config dict with 
+            state_config['world_config']
+            state_config['state']
+            to reset to a certain simulation state
+        '''
         self._seed += 1  # Increment seed
         self.rs = np.random.RandomState(self._seed)
         self.done = False
         self.steps = 0  # Count of steps taken in this episode
         # Set the button timer to zero (so button is immediately visible)
         self.buttons_timer = 0
+        if state_config:        #### @anyboby testing
+            state_config = deepcopy(state_config)
 
-        self.clear()
-        self.build()
+        self.clear() 
+        self.build(state_config=state_config)
         # Save the layout at reset
         self.reset_layout = deepcopy(self.layout)
 
@@ -888,7 +914,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
         self.first_reset = False  # Built our first world successfully
 
         # Return an observation
-        return self.obs()
+        return self.obs(), self.get_sim_state()
 
     def dist_goal(self):
         ''' Return the distance from the robot to the goal XY position '''
@@ -1122,6 +1148,13 @@ class Engine(gym.Env, gym.utils.EzPickle):
         assert self.observation_space.contains(obs), f'Bad obs {obs} {self.observation_space}'
         return obs
 
+    def get_sim_state(self):
+        sim_state = {
+            'world_config':self.world_config_dict,
+            'sim_state':self.world.sim.get_state(),
+            'layout':self.layout,
+        }
+        return deepcopy(sim_state)
 
     def cost(self):
         ''' Calculate the current costs and return a dict '''
@@ -1301,7 +1334,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
         if self.steps >= self.num_steps:
             self.done = True  # Maximum number of steps in an episode reached
 
-        return self.obs(), reward, self.done, info
+        return self.obs(), reward, self.done, info, self.get_sim_state()
 
     def reward(self):
         ''' Calculate the dense component of reward.  Call exactly once per step '''

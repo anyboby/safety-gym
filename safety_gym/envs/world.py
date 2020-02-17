@@ -294,15 +294,19 @@ class World:
         # Recompute simulation intrinsics from new position
         self.sim.forward()
 
-    def rebuild(self, config={}, state=True):
+    def rebuild(self, config={}, last_state=True, reset_state=None):
         ''' Build a new sim from a model if the model changed '''
-        if state:
+        if reset_state:     #### @anyboby testing
+            pass  
+        elif last_state:
             old_state = self.sim.get_state()
         #self.config.update(deepcopy(config))
         #self.parse(self.config)
         self.parse(config)
         self.build()
-        if state:
+        if reset_state:
+            self.sim.set_state(reset_state)
+        elif last_state:
             self.sim.set_state(old_state)
         self.sim.forward()
 
