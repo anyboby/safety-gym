@@ -294,7 +294,7 @@ class World:
         # Recompute simulation intrinsics from new position
         self.sim.forward()
 
-    def rebuild(self, config={}, last_state=True, reset_state=None):
+    def rebuild(self, config={}, last_state=True, reset_state=None):#, data=None):
         ''' Build a new sim from a model if the model changed '''
         if reset_state:     #### @anyboby testing
             pass  
@@ -305,7 +305,9 @@ class World:
         self.parse(config)
         self.build()
         if reset_state:
-            self.sim.set_state(reset_state)
+            self.sim.set_state(reset_state['sim_state'])
+            self.sim.data.ctrl[:] = reset_state['ctrl'][:]
+            #self.sim.data.sensordata = data
         elif last_state:
             self.sim.set_state(old_state)
         self.sim.forward()

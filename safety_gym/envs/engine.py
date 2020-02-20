@@ -557,7 +557,6 @@ class Engine(gym.Env, gym.utils.EzPickle):
         if not self.randomize_layout:
             self.rs = np.random.RandomState(0)
 
-        #if self.first_reset:        ###@anyboby testing
         for _ in range(10000):
             if self.sample_layout():
                 break
@@ -869,10 +868,11 @@ class Engine(gym.Env, gym.utils.EzPickle):
             self.world.build()
         else:
             self.world.reset(build=False)
-            if state_config:      ###@anyboby testing
-                self.world.rebuild(self.world_config_dict, reset_state=state_config['sim_state']) ###@anyboby testing
-            else:
-                self.world.rebuild(self.world_config_dict, last_state=False)
+            
+        if state_config:      ###@anyboby testing
+            self.world.rebuild(self.world_config_dict, reset_state=state_config)#, data=state_config['data']) ###@anyboby testing
+        else:
+            self.world.rebuild(self.world_config_dict, last_state=False)
                 
         # Redo a small amount of work, and setup initial goal state
         if state_config:    ###@anyboby testing
@@ -1154,6 +1154,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
             'world_config':self.world_config_dict,
             'sim_state':self.world.sim.get_state(),
             'layout':self.layout,
+            'ctrl':self.data.ctrl,
         }
         return deepcopy(sim_state)
 
