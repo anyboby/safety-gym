@@ -915,7 +915,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
         self.first_reset = False  # Built our first world successfully
 
         # Return an observation
-        return self.obs(), self.get_sim_state()
+        return self.obs()
 
     def dist_goal(self):
         ''' Return the distance from the robot to the goal XY position '''
@@ -1336,7 +1336,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
         if self.steps >= self.num_steps:
             self.done = True  # Maximum number of steps in an episode reached
 
-        return self.obs(), reward, self.done, info, self.get_sim_state()
+        return self.obs(), reward, self.done, info
 
     def reward(self):
         ''' Calculate the dense component of reward.  Call exactly once per step '''
